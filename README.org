@@ -1,0 +1,81 @@
+This repository contains the code needed to reproduce a bug in YAC
+(https://gitlab.dkrz.de/dkrz-sw/yac/) or possibly YAXT
+(https://gitlab.dkrz.de/dkrz-sw/yaxt).
+
+While working on a way to transfer data between different ice sheet
+modeling grids I discovered that, depending on the parallel domain
+decomposition, =yac_cget()= may sometimes deadlock in a
+=MPI_Waitall()= call:
+
+#+begin_example
+(gdb) bt
+#0  0x00007f2a6f4fbd2d in ?? () from /usr/lib/x86_64-linux-gnu/openmpi/lib/openmpi3/mca_btl_vader.so
+#1  0x00007f2aeaf26714 in opal_progress () from /lib/x86_64-linux-gnu/libopen-pal.so.40
+#2  0x00007f2aedb19745 in ompi_request_default_wait_all () from /lib/x86_64-linux-gnu/libmpi.so.40
+#3  0x00007f2aedb5a327 in PMPI_Waitall () from /lib/x86_64-linux-gnu/libmpi.so.40
+#4  0x00007f2aee71e5d6 in xt_request_msgs_wait (request=0x55bac02987e0) at xt_request_msgs.c:168
+#5  0x00007f2aee71e4ca in xt_request_wait (request=0x55bacc44e7e8) at xt_request.c:61
+#6  0x000055babe21bfd0 in yac_interpolation_execute_get ()
+#7  0x000055babe1d7b45 in main (argc=1, argv=0x7ffe3fbb1a28) at reproducer.cc:594
+(gdb)
+#+end_example
+
+Specifically, this happens when using 4 MPI processes to interpolate
+from a 900 m grid covering all of Greenland to a 5 km grid using
+more-or-less the same domain.
+
+The particular domain decomposition matters.
+
+The first test case (=test_0=) uses a domain decomposition similar to this:
+#+begin_example
++----------+----------+
+|          |          |
+|          |          |
+|  rank 2  |  rank 3  |
+|          |          |
+|          |          |
++----------+----------+
+|          |          |
+|          |          |
+|  rank 0  |  rank 1  |
+|          |          |
+|          |          |
++----------+----------+
+#+end_example
+
+The second test case (=test_1=) uses a domain decomposition similar to
+this:
+#+begin_example
++----+----+----+----+
+|    |    |    |    |
+|    |    |    |    |
+|    |    |    |    |
+|    |    |    |    |
+|    |    |    |    |
+|    |    |    |    |
+|    |    |    |    |
+|    |    |    |    |
+|    |    |    |    |
+|    |    |    |    |
+|    |    |    |    |
+|    |    |    |    |
++----+----+----+----+
+#+end_example
+
+The third test case (=test_2=) uses a domain decomposition similar to
+this:
+#+begin_example
++----------------------+
+|                      |
+|                      |
++----------------------+
+|                      |
+|                      |
++----------------------+
+|                      |
+|                      |
++----------------------+
+|                      |
+|                      |
++----------------------+
+#+end_example
