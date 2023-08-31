@@ -162,3 +162,5 @@ echo PROJ `proj 2>&1 | head -1`
 : Open MPI v4.1.2
 : g++ (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0
 : PROJ Rel. 8.2.1, January 1st, 2022
+
+See =build-yac.sh= for the way =YAXT= 3.0.1 and =YAC= 0.10.0 were built.
