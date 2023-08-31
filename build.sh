@@ -3,4 +3,6 @@
 set -x
 set -e
 
-PKG_CONFIG_PATH=$HOME/local/dkrz/lib/pkgconfig:$PKG_CONFIG_PATH make clean all
+LIB_PREFIX=$HOME/local/dkrz
+
+PKG_CONFIG_PATH=${LIB_PREFIX}/lib/pkgconfig:$PKG_CONFIG_PATH make clean all

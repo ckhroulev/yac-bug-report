@@ -1,33 +1,39 @@
+#+title: Deadlock in =yac_cget()=
+
 This repository contains the code needed to reproduce a bug in YAC
-(https://gitlab.dkrz.de/dkrz-sw/yac/) or possibly YAXT
-(https://gitlab.dkrz.de/dkrz-sw/yaxt).
+version =3.0.1= (https://gitlab.dkrz.de/dkrz-sw/yac/) or possibly YAXT
+version =0.10.0= (https://gitlab.dkrz.de/dkrz-sw/yaxt).
 
-While working on a way to transfer data between different ice sheet
-modeling grids I discovered that, depending on the parallel domain
-decomposition, =yac_cget()= may sometimes deadlock in a
-=MPI_Waitall()= call:
+#+begin_quote
+Depending on the parallel domain decomposition, =yac_cget()= may
+deadlock in a =MPI_Waitall()= call.
 
-#+begin_example
-(gdb) bt
-#0  0x00007f2a6f4fbd2d in ?? () from /usr/lib/x86_64-linux-gnu/openmpi/lib/openmpi3/mca_btl_vader.so
-#1  0x00007f2aeaf26714 in opal_progress () from /lib/x86_64-linux-gnu/libopen-pal.so.40
-#2  0x00007f2aedb19745 in ompi_request_default_wait_all () from /lib/x86_64-linux-gnu/libmpi.so.40
-#3  0x00007f2aedb5a327 in PMPI_Waitall () from /lib/x86_64-linux-gnu/libmpi.so.40
-#4  0x00007f2aee71e5d6 in xt_request_msgs_wait (request=0x55bac02987e0) at xt_request_msgs.c:168
-#5  0x00007f2aee71e4ca in xt_request_wait (request=0x55bacc44e7e8) at xt_request.c:61
-#6  0x000055babe21bfd0 in yac_interpolation_execute_get ()
-#7  0x000055babe1d7b45 in main (argc=1, argv=0x7ffe3fbb1a28) at reproducer.cc:594
-(gdb)
-#+end_example
+This happens when using several MPI processes (in these test cases: 4)
+to interpolate from a 900 m uniform Cartesian grid covering all of
+Greenland to a 5 km grid using more-or-less the same domain.
 
-Specifically, this happens when using 4 MPI processes to interpolate
-from a 900 m grid covering all of Greenland to a 5 km grid using
-more-or-less the same domain.
+I don't know how to reproduce this issue using 2 or 3 PEs: parallel
+domain decomposition details matter.
+#+end_quote
 
-The particular domain decomposition matters.
+Grids mentioned above use projected coordinate systems and are
+cumbersome to define in terms of longitude and latitude, so these test
+cases use the =PROJ= library (version 6.0 or newer) to convert =(x,y)
+-> (lon,lat)=.
+
+The =Makefile= builds three executables: =test_0= and =test_1= use
+different domain decompositions to reproduce the issue; =test_2= uses
+a third domain decomposition to show that /some/ domain decompositions
+are okay.
+
+* Test case 0
 
 The first test case (=test_0=) uses a domain decomposition similar to this:
 #+begin_example
+^
+|
+y
+|
 +----------+----------+
 |          |          |
 |          |          |
@@ -40,42 +46,119 @@ The first test case (=test_0=) uses a domain decomposition similar to this:
 |  rank 0  |  rank 1  |
 |          |          |
 |          |          |
-+----------+----------+
++----------+----------+-x->
 #+end_example
+
+* Test case 1
 
 The second test case (=test_1=) uses a domain decomposition similar to
 this:
 #+begin_example
-+----+----+----+----+
-|    |    |    |    |
-|    |    |    |    |
-|    |    |    |    |
-|    |    |    |    |
-|    |    |    |    |
-|    |    |    |    |
-|    |    |    |    |
-|    |    |    |    |
-|    |    |    |    |
-|    |    |    |    |
-|    |    |    |    |
-|    |    |    |    |
-+----+----+----+----+
+^
+|
+y
+|
++----------------------+
+|                      |
+|                      |
++----------------------+
+|                      |
+|                      |
++----------------------+
+|                      |
+|                      |
++----------------------+
+|                      |
+|                      |
++----------------------+-x->
 #+end_example
 
+* Test case 2
 The third test case (=test_2=) uses a domain decomposition similar to
 this:
 #+begin_example
-+----------------------+
-|                      |
-|                      |
-+----------------------+
-|                      |
-|                      |
-+----------------------+
-|                      |
-|                      |
-+----------------------+
-|                      |
-|                      |
-+----------------------+
+^
+|
+y
+|
++----+----+----+----+
+|    |    |    |    |
+|    |    |    |    |
+|    |    |    |    |
+|    |    |    |    |
+|    |    |    |    |
+|    |    |    |    |
+|    |    |    |    |
+|    |    |    |    |
+|    |    |    |    |
+|    |    |    |    |
+|    |    |    |    |
+|    |    |    |    |
++----+----+----+----+-x->
 #+end_example
+
+* Building
+
+If =YAC=, =YAXT=, and =PROJ= are installed in standard locations, just
+run =make=.
+  
+Otherwise edit =LIB_PREFIX= in =build.sh=, then run =./build.sh=.
+
+* Running test cases
+
+All three test cases succeed (and are identical since the domain
+decomposition is the same) when executed using one MPI process. It
+takes a while since the source grid contains over 5e6 points.
+
+#+begin_src bash :results output :exports results :cache yes
+/usr/bin/time ./test_0 2>&1
+#+end_src
+
+#+RESULTS[8bb49df1fe86982ba52e4b8862b9020b36b74a51]:
+#+begin_example
+Initializing the YAC instance... done
+Defining components... done
+Defining the source grid... done
+Defining the target grid... done
+Defining fields... done
+Defining the interpolation stack... done
+Defining the couple... done
+Computing interpolation weights... done
+Calling yac_cput()... done
+Calling yac_cget()... done
+54.73user 6.23system 1:01.28elapsed 99%CPU (0avgtext+0avgdata 5786644maxresident)k
+0inputs+0outputs (6major+5074566minor)pagefaults 0swaps
+#+end_example
+
+When running with 4 MPI processes, =mpiexec -n 4 test_0= and =mpiexec
+-n 4 test_1= hang and =mpiexec -n 4 test_2= succeeds, producing the
+same output (but faster).
+
+Attaching GDB to a hanging process gives this backtrace:
+
+#+begin_example
+(gdb) bt
+#0  0x00007f7607bbc2ec in ompi_coll_libnbc_progress () from /usr/lib/x86_64-linux-gnu/openmpi/lib/openmpi3/mca_coll_libnbc.so
+#1  0x00007f768e926714 in opal_progress () from /lib/x86_64-linux-gnu/libopen-pal.so.40
+#2  0x00007f7691519745 in ompi_request_default_wait_all () from /lib/x86_64-linux-gnu/libmpi.so.40
+#3  0x00007f769155a327 in PMPI_Waitall () from /lib/x86_64-linux-gnu/libmpi.so.40
+#4  0x00007f769215a236 in xt_request_msgs_wait (request=0x5625b8e9e990) at xt_request_msgs.c:168
+#5  0x00007f769215a12a in xt_request_wait (request=0x5625bfdb8828) at xt_request.c:61
+#6  0x00005625b8166030 in yac_interpolation_execute_get ()
+#7  0x00005625b81219cc in main (argc=1, argv=0x7fff9a4782b8) at tests.cc:598
+#+end_example
+
+* Environment info
+
+#+begin_src bash :results output :exports results :cache yes
+lsb_release -d
+ompi_info --version | head -1
+mpicxx --version | head -1
+echo PROJ `proj 2>&1 | head -1`
+#+end_src
+
+#+RESULTS[10b1006e52e05bcb8fa0259c14c1d35fd4550f38]:
+: Description:	Pop!_OS 22.04 LTS
+: Open MPI v4.1.2
+: g++ (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0
+: PROJ Rel. 8.2.1, January 1st, 2022

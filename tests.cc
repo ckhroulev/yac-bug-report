@@ -98,6 +98,8 @@ struct LonLatGrid {
  */
 void print(MPI_Comm com, const char *format, ...) __attribute__((format(printf, 2, 3)));
 void print(MPI_Comm com, const char *format, ...) {
+  MPI_Barrier(com);
+
   int rank = 0;
   MPI_Comm_rank(com, &rank);
   if (rank != 0) {
