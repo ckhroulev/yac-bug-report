@@ -94,7 +94,7 @@ struct LonLatGrid {
 };
 
 /*!
- * Print a message on rank 0.
+ * Synchronize processes in `com` and print a message to stderr on rank 0.
  */
 void print(MPI_Comm com, const char *format, ...) __attribute__((format(printf, 2, 3)));
 void print(MPI_Comm com, const char *format, ...) {
@@ -181,9 +181,7 @@ std::vector<double> linspace(double start, double step, int N) {
  *
  * `grid_lon` and `grid_lat` should define cell vertices (cell bounds).
  *
- * `cell_lon` and `cell_lat` correspond to cell centers (for grids used
- * for conservative interpolation). Set to `nullptr` to define a grid
- * using cell vertices as the point set.
+ * `cell_lon` and `cell_lat` correspond to cell centers.
  *
  * All coordinates are in radians.
  *
@@ -209,7 +207,7 @@ int define_grid(const char *grid_name, int n_vertices[2], double *grid_lon,
 }
 
 /*!
- * Define the source grid for the `test_case`.
+ * Define the source grid for a `test_case`.
  */
 ProjectedGrid source(int rank, int size, int test_case) {
   auto x = linspace(-678200, 900, 1760);
@@ -279,7 +277,7 @@ ProjectedGrid source(int rank, int size, int test_case) {
 }
 
 /*!
- * Define the target grid for the `test_case`.
+ * Define the target grid for a `test_case`.
  */
 ProjectedGrid target(int rank, int size, int test_case) {
 
@@ -396,6 +394,7 @@ int define_grid(const ProjectedGrid &info, const std::string &grid_name) {
   LonLatGrid nodes(x, y, info.projection);
   int n_nodes[2] = {(int)x.size(), (int)y.size()};
 
+  // Compute global cell indices:
   std::vector<int> cell_global_index(n_cells[0] * n_cells[1]);
   {
     int Mx = info.x.size();
@@ -414,11 +413,11 @@ int define_grid(const ProjectedGrid &info, const std::string &grid_name) {
 }
 
 /*!
- * Define a "field" on a point set `point_id` in the component `comp_id`.
+ * Define a *field* on a point set `point_id` in the component `comp_id`.
  *
  * Returns the field ID that can be used to define a *couple*.
  */
-static int define_field(int comp_id, int point_id, const char *field_name) {
+int define_field(int comp_id, int point_id, const char *field_name) {
 
   const char *time_step_length = "1";
   const int point_set_size = 1;
@@ -572,7 +571,7 @@ int main(int argc, char **argv) {
       // free the interpolation stack config now that we defined the coupling
       yac_cfree_interp_stack_config(interp_stack_id);
 
-      print(com, "Computing interpolation weights... ");
+      print(com, "Computing interpolation weights, etc... ");
       yac_cenddef_instance(instance_id);
       print(com, "done\n");
 
@@ -581,7 +580,7 @@ int main(int argc, char **argv) {
       int collection_size = 1;
       {
         std::vector<double> input_array(input.xm * input.ym);
-        // the contents of input_array don't matter
+        // the contents of input_array don't matter here
 
         double *send_field_[1] = {input_array.data()};
         double **send_field[1] = {&send_field_[0]};
