@@ -110,7 +110,7 @@ All three test cases succeed (and are identical since the domain
 decomposition is the same) when executed using one MPI process. It
 takes a while since the source grid contains over 5e6 points.
 
-#+begin_src bash :results output :exports results :cache yes
+#+begin_src bash :results output :exports both :cache yes
 /usr/bin/time ./test_0 2>&1
 #+end_src
 
@@ -123,11 +123,11 @@ Defining the target grid... done
 Defining fields... done
 Defining the interpolation stack... done
 Defining the couple... done
-Computing interpolation weights... done
+Computing interpolation weights, etc... done
 Calling yac_cput()... done
 Calling yac_cget()... done
-54.73user 6.23system 1:01.28elapsed 99%CPU (0avgtext+0avgdata 5786644maxresident)k
-0inputs+0outputs (6major+5074566minor)pagefaults 0swaps
+59.38user 6.76system 1:06.43elapsed 99%CPU (0avgtext+0avgdata 5786828maxresident)k
+0inputs+0outputs (8major+5058422minor)pagefaults 0swaps
 #+end_example
 
 When running with 4 MPI processes, =mpiexec -n 4 test_0= and =mpiexec
@@ -137,20 +137,21 @@ same output (but faster).
 Attaching GDB to a hanging process gives this backtrace:
 
 #+begin_example
-(gdb) bt
-#0  0x00007f7607bbc2ec in ompi_coll_libnbc_progress () from /usr/lib/x86_64-linux-gnu/openmpi/lib/openmpi3/mca_coll_libnbc.so
-#1  0x00007f768e926714 in opal_progress () from /lib/x86_64-linux-gnu/libopen-pal.so.40
-#2  0x00007f7691519745 in ompi_request_default_wait_all () from /lib/x86_64-linux-gnu/libmpi.so.40
-#3  0x00007f769155a327 in PMPI_Waitall () from /lib/x86_64-linux-gnu/libmpi.so.40
-#4  0x00007f769215a236 in xt_request_msgs_wait (request=0x5625b8e9e990) at xt_request_msgs.c:168
-#5  0x00007f769215a12a in xt_request_wait (request=0x5625bfdb8828) at xt_request.c:61
-#6  0x00005625b8166030 in yac_interpolation_execute_get ()
-#7  0x00005625b81219cc in main (argc=1, argv=0x7fff9a4782b8) at tests.cc:598
+  (gdb) bt
+  #0  0x00007f8aef773134 in ?? () from /lib/x86_64-linux-gnu/libopen-pal.so.40
+  #1  0x00007f8aef77678f in ?? () from /lib/x86_64-linux-gnu/libopen-pal.so.40
+  #2  0x00007f8aef726764 in opal_progress () from /lib/x86_64-linux-gnu/libopen-pal.so.40
+  #3  0x00007f8af2319745 in ompi_request_default_wait_all () from /lib/x86_64-linux-gnu/libmpi.so.40
+  #4  0x00007f8af235a327 in PMPI_Waitall () from /lib/x86_64-linux-gnu/libmpi.so.40
+  #5  0x00007f8af2f83236 in xt_request_msgs_wait (request=0x556abc8e1610) at xt_request_msgs.c:168
+  #6  0x00007f8af2f8312a in xt_request_wait (request=0x556ac34e7678) at xt_request.c:61
+  #7  0x0000556abaad7f50 in yac_interpolation_execute_get ()
+  #8  0x0000556abaa938e7 in main (argc=1, argv=0x7fff9e6d6468) at tests.cc:564
 #+end_example
 
 * Environment info
 
-#+begin_src bash :results output :exports results :cache yes
+#+begin_src bash :results output :exports both :cache yes
 lsb_release -d
 ompi_info --version | head -1
 mpicxx --version | head -1
