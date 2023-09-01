@@ -177,36 +177,6 @@ std::vector<double> linspace(double start, double step, int N) {
 }
 
 /*!
- * Define a curvilinear Cartesian 2D grid on a sphere using YAC.
- *
- * `grid_lon` and `grid_lat` should define cell vertices (cell bounds).
- *
- * `cell_lon` and `cell_lat` correspond to cell centers.
- *
- * All coordinates are in radians.
- *
- * Returns the point ID that can be used to define a *field*.
- */
-int define_grid(const char *grid_name, int n_vertices[2], double *grid_lon,
-                double *grid_lat, int n_points[2], double *cell_lon,
-                double *cell_lat, int *cell_global_index) {
-
-  int cyclic[] = {0, 0};
-  int grid_id = 0;
-
-  yac_cdef_grid_curve2d(grid_name, n_vertices, cyclic, grid_lon, grid_lat,
-                        &grid_id);
-
-  yac_cset_global_index(cell_global_index, YAC_LOCATION_CELL, grid_id);
-
-  int point_id = 0;
-  yac_cdef_points_curve2d(grid_id, n_points, YAC_LOCATION_CELL, cell_lon,
-                          cell_lat, &point_id);
-
-  return point_id;
-}
-
-/*!
  * Define the source grid for a `test_case`.
  */
 ProjectedGrid source(int rank, int size, int test_case) {
@@ -407,9 +377,20 @@ int define_grid(const ProjectedGrid &info, const std::string &grid_name) {
     }
   }
 
-  return define_grid(grid_name.c_str(), n_nodes, nodes.lon.data(),
-                     nodes.lat.data(), n_cells, cells.lon.data(),
-                     cells.lat.data(), cell_global_index.data());
+  int point_id = 0;
+  {
+    int cyclic[] = {0, 0};
+    int grid_id = 0;
+
+    yac_cdef_grid_curve2d(grid_name.c_str(), n_nodes, cyclic, nodes.lon.data(),
+                          nodes.lat.data(), &grid_id);
+
+    yac_cset_global_index(cell_global_index.data(), YAC_LOCATION_CELL, grid_id);
+
+    yac_cdef_points_curve2d(grid_id, n_cells, YAC_LOCATION_CELL, cells.lon.data(),
+                            cells.lat.data(), &point_id);
+  }
+  return point_id;
 }
 
 /*!
