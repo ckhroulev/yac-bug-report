@@ -28,7 +28,7 @@ build_yac () {
 
 rm -rf yac
 
-git clone -b release-3.0.1 https://gitlab.dkrz.de/dkrz-sw/yac.git
+git clone -b release-3.0.2 https://gitlab.dkrz.de/dkrz-sw/yac.git
 
 pushd yac
 

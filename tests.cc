@@ -518,8 +518,6 @@ int main(int argc, char **argv) {
       // Define the coupling between fields:
       const int src_lag = 0;
       const int tgt_lag = 0;
-      const int mapping_side = 1; // 1 means "mapping on source"
-      const char *weight_file_name = nullptr;
       print(com, "Defining the couple... ");
       yac_cdef_couple("input",              // input component name
                       "source",             // input grid name
@@ -531,8 +529,9 @@ int main(int argc, char **argv) {
                       YAC_TIME_UNIT_SECOND, // time step length units
                       YAC_REDUCTION_TIME_NONE, // reduction in time (for
                                                // asynchronous coupling)
-                      interp_stack_id, src_lag, tgt_lag, weight_file_name,
-                      mapping_side);
+                      interp_stack_id,
+                      src_lag,
+                      tgt_lag);
       print(com, "done\n");
 
       // free the interpolation stack config now that we defined the coupling
