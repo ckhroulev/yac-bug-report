@@ -413,37 +413,6 @@ int define_field(int comp_id, int point_id, const char *field_name) {
 }
 
 /*!
- * Define an interpolation stack.
- *
- * Returns the interpolation stack ID.
- */
-int define_interpolation(double missing_value) {
-  int id = 0;
-  yac_cget_interp_stack_config(&id);
-
-  int order = 1;
-  int enforce_conservation = 1;
-  int partial_coverage = 0;
-
-  // conservative
-  yac_cadd_interp_stack_config_conservative(
-      id, order, enforce_conservation, partial_coverage, YAC_CONSERV_DESTAREA);
-
-  // piecewise-linear on the triangulation of the source grid
-  yac_cadd_interp_stack_config_average(id, YAC_AVG_BARY, partial_coverage);
-
-  // nearest neighbor
-  int n_neighbors = 1;
-  double scaling = 1.0;
-  yac_cadd_interp_stack_config_nnn(id, YAC_NNN_DIST, n_neighbors, scaling);
-
-  // constant if all of the above failed
-  yac_cadd_interp_stack_config_fixed(id, missing_value);
-
-  return id;
-}
-
-/*!
  * Test case choices:
  *
  * 0: "bad"
@@ -523,9 +492,26 @@ int main(int argc, char **argv) {
       print(com, "done\n");
 
       // Define the interpolation stack:
-      double fill_value = -99999;
+      int interp_stack_id = 0;
       print(com, "Defining the interpolation stack... ");
-      int interp_stack_id = define_interpolation(fill_value);
+      {
+        yac_cget_interp_stack_config(&interp_stack_id);
+
+        int order = 1;
+        int enforce_conservation = 1;
+        int partial_coverage = 0;
+
+        // conservative
+        yac_cadd_interp_stack_config_conservative(
+            interp_stack_id, order, enforce_conservation, partial_coverage,
+            YAC_CONSERV_DESTAREA);
+
+        // nearest neighbor
+        int n_neighbors = 1;
+        double scaling = 1.0;
+        yac_cadd_interp_stack_config_nnn(interp_stack_id, YAC_NNN_DIST,
+                                         n_neighbors, scaling);
+      }
       print(com, "done\n");
 
       // Define the coupling between fields:
