@@ -32,7 +32,7 @@ public:
 
   ~LonLatCalculator() { proj_destroy(m_pj); }
 
-  std::array<double, 2> lonlat(double x, double y) const {
+  std::array<double, 2> operator()(double x, double y) const {
     PJ_COORD in;
     in.xy = {x, y};
 
@@ -84,7 +84,7 @@ struct LonLatGrid {
 
     for (int row = 0; row < nrow; ++row) {
       for (int col = 0; col < ncol; ++col) {
-        auto coords = mapping.lonlat(x[col], y[row]);
+        auto coords = mapping(x[col], y[row]);
 
         lon[C(row, col)] = deg2rad(coords[0]);
         lat[C(row, col)] = deg2rad(coords[1]);
