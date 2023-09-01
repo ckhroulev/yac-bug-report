@@ -1,7 +1,7 @@
 #+title: Deadlock in =yac_cget()=
 
 This repository contains the code needed to reproduce a bug in YAC
-version =3.0.1= (https://gitlab.dkrz.de/dkrz-sw/yac/) or possibly YAXT
+version =3.0.2= (https://gitlab.dkrz.de/dkrz-sw/yac/) or possibly YAXT
 version =0.10.0= (https://gitlab.dkrz.de/dkrz-sw/yaxt).
 
 #+begin_quote
@@ -107,7 +107,7 @@ Otherwise edit =LIB_PREFIX= in =build.sh=, then run =./build.sh=.
 * Running test cases
 
 All three test cases succeed (and are identical since the domain
-decomposition is the same) when executed using one MPI process. It
+decomposition is the same) when executed using one MPI process. This
 takes a while since the source grid contains over 5e6 points.
 
 #+begin_src bash :results output :exports both :cache yes
@@ -131,22 +131,37 @@ Calling yac_cget()... done
 #+end_example
 
 When running with 4 MPI processes, =mpiexec -n 4 test_0= and =mpiexec
--n 4 test_1= hang and =mpiexec -n 4 test_2= succeeds, producing the
-same output (but faster).
+-n 4 test_1= fail with an error message (see below) and =mpiexec -n 4 test_2=
+succeeds, producing the same output (but faster).
 
-Attaching GDB to a hanging process gives this backtrace:
+#+begin_src bash :results output :exports both :cache yes
+mpiexec -n 4 ./test_0 2>&1 || exit 0
+#+end_src
 
+#+RESULTS[05471f590a518c22346d70f198d4c7ab17446d49]:
 #+begin_example
-  (gdb) bt
-  #0  0x00007f8aef773134 in ?? () from /lib/x86_64-linux-gnu/libopen-pal.so.40
-  #1  0x00007f8aef77678f in ?? () from /lib/x86_64-linux-gnu/libopen-pal.so.40
-  #2  0x00007f8aef726764 in opal_progress () from /lib/x86_64-linux-gnu/libopen-pal.so.40
-  #3  0x00007f8af2319745 in ompi_request_default_wait_all () from /lib/x86_64-linux-gnu/libmpi.so.40
-  #4  0x00007f8af235a327 in PMPI_Waitall () from /lib/x86_64-linux-gnu/libmpi.so.40
-  #5  0x00007f8af2f83236 in xt_request_msgs_wait (request=0x556abc8e1610) at xt_request_msgs.c:168
-  #6  0x00007f8af2f8312a in xt_request_wait (request=0x556ac34e7678) at xt_request.c:61
-  #7  0x0000556abaad7f50 in yac_interpolation_execute_get ()
-  #8  0x0000556abaa938e7 in main (argc=1, argv=0x7fff9e6d6468) at tests.cc:564
+Initializing YAC... done
+Defining components... done
+Defining the source grid... done
+Defining the target grid... done
+Defining fields... done
+Defining the interpolation stack... done
+Defining the couple... done
+Computing interpolation weights, etc... done
+Calling yac_cput()... done
+Calling yac_cget()... ERROR(yac_interpolation_direct_execute_get): state of exchange "source to target" is inconsistent 
+Aborting in file interpolation_exchange.c, line 261 ...
+--------------------------------------------------------------------------
+Primary job  terminated normally, but 1 process returned
+a non-zero exit code. Per user-direction, the job has been aborted.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+mpiexec detected that one or more processes exited with non-zero status, thus causing
+the job to be terminated. The first process to do so was:
+
+  Process name: [[64015,1],2]
+  Exit code:    1
+--------------------------------------------------------------------------
 #+end_example
 
 * Environment info
@@ -164,4 +179,4 @@ echo PROJ `proj 2>&1 | head -1`
 : g++ (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0
 : PROJ Rel. 8.2.1, January 1st, 2022
 
-See =build-yac.sh= for the way =YAXT= 3.0.1 and =YAC= 0.10.0 were built.
+See =build-yac.sh= for the way =YAXT= 3.0.2 and =YAC= 0.10.0 were built.
