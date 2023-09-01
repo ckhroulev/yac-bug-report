@@ -132,6 +132,8 @@ void print(MPI_Comm com, const char *format, ...) {
 struct ProjectedGrid {
 
   // grid coordinates, in meters
+  //
+  // Note: these cover the whole domain, not just the subdomain owned by this PE.
   std::vector<double> x, y;
 
   // PROJ string defining the projection
